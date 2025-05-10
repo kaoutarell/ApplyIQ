@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* base | utilities | components are deprecated */
 
 :root {
   --background: #ffffff;
