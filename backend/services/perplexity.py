@@ -1,7 +1,7 @@
 import requests
 from config import PERPLEXITY_API_KEY
-import re
 import pprint
+from urllib.parse import urlparse
 
 def query_perplexity(query: str):
     url = "https://api.perplexity.ai/chat/completions"
@@ -19,7 +19,17 @@ def query_perplexity(query: str):
         "presence_penalty": 0,
         "frequency_penalty": 1,
         "web_search_options": {"search_context_size": "low"},
-        "model": "sonar",
+        "search_domain_filter": [
+            "indeed.com",
+            "jobillico.com",
+            "jobbank.gc.ca",
+            "glassdoor.com",
+            "monster.ca",
+            "emplois.ca.indeed.com",
+            "workopolis.com",
+            "montreal-job.ca"
+        ],
+        "model": "sonar-reasoning-pro", #changing deep-reasoning - see commit comments
         "messages": [{"role": "user", "content": query}],
     }
 
@@ -27,34 +37,35 @@ def query_perplexity(query: str):
     data = response.json()
     pprint.pprint(data)  # Log raw response for testing
 
-    text = data["choices"][0]["message"]["content"]
     citations = data.get("citations", [])
+    
+    # Process citations into AnswerCard format
+    citation_cards = []
+    for citation in citations:
+        if not is_job_listing_url(citation):
+            continue
 
-    jobs = []
-    entries = re.split(r'\n(?=\d+\.\s)', text.strip())  # Split numbered entries
-
-    for i, entry in enumerate(entries):
-        # Extract title: e.g., **Google Software Engineering Internship**
-        title_match = re.search(r"\*\*(.*?)\*\*", entry)
-        title = title_match.group(1).strip() if title_match else f"Opportunity {i+1}"
-
-        # Extract description: first paragraph/sentence after the title
-        desc_match = re.search(r"\*\*.*?\*\*:\s*(.*?)(?:\n\n|\n\d+\.|\Z)", entry, re.DOTALL)
-        description = desc_match.group(1).strip() if desc_match else "Follow the link for more info"
-
-        # Clean formatting
-        description = re.sub(r"\[\d+\]", "", description)  # remove citation refs like [1]
-        description = re.sub(r"\s{2,}", " ", description)
-
-        # Assign link (loop through if fewer citations than jobs)
-        link = citations[i % len(citations)] if citations else "#"
-
-        jobs.append({
-            "title": title,
-            "description": description,
-            "link": link,
+        parsed_url = urlparse(citation)
+        domain = parsed_url.netloc.replace('www.', '').replace('.com', '').replace('.ca', '').title()
+        
+        # Extract meaningful title from URL
+        path_parts = [p for p in parsed_url.path.split('/') if p and not p.startswith('q-')]
+        title = path_parts[-1] if path_parts else domain
+        title = title.replace('-', ' ').replace('_', ' ').title()
+        
+        # Clean up special cases
+        if 'indeed' in domain.lower():
+            title = title.replace('Q ', '').replace('L ', '')
+        
+        citation_cards.append({
+            "title": f"{title}",
+            "description": f"Source: {domain}",
+            "link": citation,
         })
 
-        # Needs more improvement -- 
+    return citation_cards
 
-    return jobs
+# new function that helps in filtering the findings - narrow it to only the job related links
+def is_job_listing_url(url):
+    job_keywords = ["job", "emploi", "posting", "offer", "career", "recruit", "position"]
+    return any(keyword in url.lower() for keyword in job_keywords)

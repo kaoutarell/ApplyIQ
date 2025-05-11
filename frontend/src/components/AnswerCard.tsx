@@ -30,13 +30,19 @@ export default function AnswerCard({
       )}
 
       <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-between">
-        {title}
-        <FaExternalLinkAlt className="text-sm text-purple-400 ml-2" />
+        <span className="truncate">{title}</span>
+        <FaExternalLinkAlt className="text-sm text-purple-400 ml-2 flex-shrink-0" />
       </h3>
 
-      <p className="text-sm text-gray-300 line-clamp-4 flex gap-2">
-        <FaInfoCircle className="mt-0.5" /> {description}
-      </p>
+      <div className="flex items-start gap-2">
+        <FaInfoCircle className="mt-0.5 text-purple-400 flex-shrink-0" />
+        <p className="text-sm text-gray-300 line-clamp-2">
+          {description}
+          <span className="block mt-1 text-xs text-gray-400 truncate">
+            {new URL(link).hostname.replace("www.", "")}
+          </span>
+        </p>
+      </div>
     </a>
   );
 }

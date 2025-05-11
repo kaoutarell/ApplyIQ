@@ -68,6 +68,10 @@ export default function SearchBar() {
       {loading && (
         <div className="flex justify-center my-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500" />
+          <p className="text-sm md:text-l text-gray-300">
+            Please hang on, we're scanning the web for you. This might take few
+            minutes ...
+          </p>
         </div>
       )}
 
