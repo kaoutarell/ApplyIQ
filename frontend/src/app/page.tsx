@@ -1,12 +1,12 @@
 // src/app/page.tsx
 "use client";
 
-import SearchBar from "@/components/SearchBar";
+import SearchContainer from "@/components/SearchContainer";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="text-center space-y-6 max-w-7xl mx-auto">
+      <div className="text-center space-y-6 max-w-7xl mx-auto w-full">
         <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-transparent bg-clip-text">
           🌀 ApplyIQ Portal
         </h1>
@@ -15,7 +15,7 @@ export default function Home() {
           match is here!
         </p>
 
-        <SearchBar />
+        <SearchContainer />
       </div>
     </main>
   );
