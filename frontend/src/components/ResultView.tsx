@@ -1,4 +1,3 @@
-// components/ResultView.tsx
 "use client";
 
 import AnswerCard from "./AnswerCard";
@@ -21,10 +20,7 @@ type ResultViewProps = {
 
 export default function ResultView({ result }: ResultViewProps) {
   return (
-    <div className="space-y-6 mt-8">
-      {/* ThinkText component */}
-      {result.think_text && <ThinkText content={result.think_text} />}
-
+    <div className="space-y-8 mt-8">
       {/* Job Opportunity Cards */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {result.cards.map((card, index) => (
@@ -37,36 +33,35 @@ export default function ResultView({ result }: ResultViewProps) {
         ))}
       </div>
 
-      {/* Skills and Certifications */}
-      <div className="mt-8">
-        <h2 className="text-xl text-white font-semibold mb-4">
-          Skills Required
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {result.skills.map((skill, i) => (
-            <Badge key={`skill-${i}`} text={skill} variant="green" />
-          ))}
-        </div>
+      {/* ThinkText component */}
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-4">Insights ✨</h2>
+        {result.think_text && <ThinkText content={result.think_text} />}
+      </div>
 
-        <h2 className="text-xl text-white font-semibold mt-6 mb-4">
-          Certifications & Education
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {result.certifications.map((cert, i) => (
-            <Badge key={`cert-${i}`} text={cert} variant="blue" />
-          ))}
+      {/* Skills and Certifications */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-white mb-4">Skills Required</h2>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {result.skills.length > 0 ? (
+            result.skills.map((skill, i) => (
+              <Badge key={`skill-${i}`} text={skill} variant="green" />
+            ))
+          ) : (
+            <Badge text="No skills specified" variant="yellow" />
+          )}
         </div>
       </div>
 
       {/* Assistant Text */}
-      {/* {result.assistant_text && (
-        <div className="mt-8 bg-neutral-800 border border-neutral-700 rounded-lg p-6 text-left">
-          <h2 className="text-xl text-white font-semibold mb-4">Summary</h2>
-          <p className="text-neutral-300 whitespace-pre-wrap">
-            {result.assistant_text}
-          </p>
+      {result.assistant_text && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Requirements and responsabilities
+          </h2>
+          <ThinkText content={result.assistant_text} />
         </div>
-      )} */}
+      )}
     </div>
   );
 }

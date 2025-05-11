@@ -2,6 +2,7 @@ import requests
 from config import PERPLEXITY_API_KEY
 from urllib.parse import urlparse
 import re
+import pprint
 
 # --- Utility functions ---
 
@@ -9,11 +10,47 @@ def is_job_listing_url(url):  # filtering
     job_keywords = ["job", "emploi", "posting", "offer", "career", "recruit", "position"]
     return any(keyword in url.lower() for keyword in job_keywords)
 
-def extract_think_and_cleaned_content(content: str):  # <think> feature
+#updated - we don't want to show the first sentence (not important)
+def extract_think_and_cleaned_content(content: str):
+    """Extract think text and clean content with improved formatting"""
     think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
     think_text = think_match.group(1).strip() if think_match else ""
+    
+    # Remove everything before the first result reference
+    if think_text:
+        # Find the first occurrence of "result [X]" or similar pattern
+        result_match = re.search(r'(Looking at result|Result|result)\s*\[?\d+\]?', think_text, re.IGNORECASE)
+        if result_match:
+            think_text = think_text[result_match.start():]
+        
+        # Also remove any remaining initial sentences that might be before the first result
+        sentences = re.split(r'(?<=[.!?])\s+', think_text)
+        if len(sentences) > 1 and not re.match(r'(Looking at|Result|result)', sentences[0], re.IGNORECASE):
+            think_text = ' '.join(sentences[1:])
+    
     cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    
+    # Format the content
+    think_text = format_content(think_text)
+    cleaned_content = format_content(cleaned_content)
+    
     return think_text, cleaned_content
+
+def format_content(text: str) -> str:
+    """Format content with proper line breaks and heading handling"""
+    # Convert Result[X] to bullet points
+    text = re.sub(r'Result\s*\[\d+\]', lambda m: f"\n- {m.group(0)}", text)
+    
+    # Convert **heading** to \n## heading\n
+    text = re.sub(r'\*\*(.*?)\*\*', r'\n## \1\n', text)
+    
+    # Convert # heading to \n### heading\n
+    text = re.sub(r'#\s+(.*?)(?:\n|$)', r'\n### \1\n', text)
+    
+    # Ensure proper spacing between sections
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    return text.strip()
 
 def format_citations(citations):  # extract only useful citation info
     cards = []
@@ -89,6 +126,7 @@ def query_perplexity(query: str):
 
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
+    pprint.pprint(data)  # Log raw response for testing
 
     # Extract core fields
     message = data["choices"][0]["message"]["content"]
