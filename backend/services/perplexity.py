@@ -1,7 +1,67 @@
 import requests
 from config import PERPLEXITY_API_KEY
-import pprint
 from urllib.parse import urlparse
+import re
+
+# --- Utility functions ---
+
+def is_job_listing_url(url):  # filtering
+    job_keywords = ["job", "emploi", "posting", "offer", "career", "recruit", "position"]
+    return any(keyword in url.lower() for keyword in job_keywords)
+
+def extract_think_and_cleaned_content(content: str):  # <think> feature
+    think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+    think_text = think_match.group(1).strip() if think_match else ""
+    cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+    return think_text, cleaned_content
+
+def format_citations(citations):  # extract only useful citation info
+    cards = []
+    for citation in citations:
+        if not is_job_listing_url(citation):
+            continue
+
+        parsed_url = urlparse(citation)
+        domain = parsed_url.netloc.replace('www.', '').replace('.com', '').replace('.ca', '').title()
+
+        path_parts = [p for p in parsed_url.path.split('/') if p and not p.startswith('q-')]
+        title = path_parts[-1] if path_parts else domain
+        title = title.replace('-', ' ').replace('_', ' ').title()
+
+        if 'indeed' in domain.lower():
+            title = title.replace('Q ', '').replace('L ', '')
+
+        cards.append({
+            "title": title,
+            "description": f"Source: {domain}",
+            "link": citation,
+        })
+    return cards
+
+def extract_skills_and_certifications(text):
+    # Basic patterns for skills and certs
+    skills_pattern = re.compile(
+        r"(skills\s*(?:required|preferred)?[:\-]\s*|skills include\s*|proficiency in\s*)(.+?)(?:\n|\.|\Z)", re.IGNORECASE)
+    certs_pattern = re.compile(
+        r"(certifications\s*(?:required|preferred)?[:\-]\s*|certifications include\s*|certified in\s*)(.+?)(?:\n|\.|\Z)", re.IGNORECASE)
+
+    skills_matches = skills_pattern.findall(text)
+    certs_matches = certs_pattern.findall(text)
+
+    # Flatten and clean results
+    skills = []
+    for _, match in skills_matches:
+        parts = re.split(r',|and|or|/|•', match)
+        skills.extend([s.strip(" *:-").title() for s in parts if len(s.strip()) > 1])
+
+    certifications = []
+    for _, match in certs_matches:
+        parts = re.split(r',|and|or|/|•', match)
+        certifications.extend([c.strip(" *:-").title() for c in parts if len(c.strip()) > 1])
+
+    return list(set(skills)), list(set(certifications))
+
+# --- Main service function ---
 
 def query_perplexity(query: str):
     url = "https://api.perplexity.ai/chat/completions"
@@ -20,52 +80,30 @@ def query_perplexity(query: str):
         "frequency_penalty": 1,
         "web_search_options": {"search_context_size": "low"},
         "search_domain_filter": [
-            "indeed.com",
-            "jobillico.com",
-            "jobbank.gc.ca",
-            "glassdoor.com",
-            "monster.ca",
-            "emplois.ca.indeed.com",
-            "workopolis.com",
-            "montreal-job.ca"
+            "indeed.com", "jobillico.com", "jobbank.gc.ca", "glassdoor.com",
+            "monster.ca", "emplois.ca.indeed.com", "workopolis.com", "montreal-job.ca"
         ],
-        "model": "sonar-reasoning-pro", #changing deep-reasoning - see commit comments
+        "model": "sonar-reasoning-pro",
         "messages": [{"role": "user", "content": query}],
     }
 
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
-    pprint.pprint(data)  # Log raw response for testing
 
+    # Extract core fields
+    message = data["choices"][0]["message"]["content"]
     citations = data.get("citations", [])
-    
-    # Process citations into AnswerCard format
-    citation_cards = []
-    for citation in citations:
-        if not is_job_listing_url(citation):
-            continue
 
-        parsed_url = urlparse(citation)
-        domain = parsed_url.netloc.replace('www.', '').replace('.com', '').replace('.ca', '').title()
-        
-        # Extract meaningful title from URL
-        path_parts = [p for p in parsed_url.path.split('/') if p and not p.startswith('q-')]
-        title = path_parts[-1] if path_parts else domain
-        title = title.replace('-', ' ').replace('_', ' ').title()
-        
-        # Clean up special cases
-        if 'indeed' in domain.lower():
-            title = title.replace('Q ', '').replace('L ', '')
-        
-        citation_cards.append({
-            "title": f"{title}",
-            "description": f"Source: {domain}",
-            "link": citation,
-        })
+    # Apply custom logic
+    think_text, assistant_text = extract_think_and_cleaned_content(message)
+    citation_cards = format_citations(citations)
+    skills, certifications = extract_skills_and_certifications(assistant_text)
 
-    return citation_cards
-
-# new function that helps in filtering the findings - narrow it to only the job related links
-def is_job_listing_url(url):
-    job_keywords = ["job", "emploi", "posting", "offer", "career", "recruit", "position"]
-    return any(keyword in url.lower() for keyword in job_keywords)
+    # Final structured result
+    return {
+        "cards": citation_cards,
+        "assistant_text": assistant_text,
+        "think_text": think_text,
+        "skills": skills,
+        "certifications": certifications
+    }

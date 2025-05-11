@@ -1,19 +1,26 @@
+// components/SearchBar.tsx
 "use client";
 
 import { useState } from "react";
 import AnswerCard from "./AnswerCard";
+import ThinkText from "./ThinkText";
+import Badge from "./Badge";
 
 type Result = {
-  title: string;
-  link: string;
+  cards: {
+    title: string;
+    description: string;
+    link: string;
+  }[];
+  assistant_text: string;
+  think_text: string;
+  skills: string[];
+  certifications: string[];
 };
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
-  //   const [results, setResults] = useState<Result[]>([]);
-  const [results, setResults] = useState<
-    { title: string; description: string; link: string }[]
-  >([]);
+  const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +48,7 @@ export default function SearchBar() {
       }
 
       const data = await response.json();
-      setResults(data.results);
+      setResult(data.results);
     } catch (error) {
       setError("Failed to fetch job listings.");
     } finally {
@@ -64,30 +71,63 @@ export default function SearchBar() {
         </div>
       </form>
 
-      {/* {loading && <p className="text-center text-gray-500 mt-4">Loading...</p>} -- refactored */}
       {loading && (
         <div className="flex justify-center my-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500" />
-          <p className="text-sm md:text-l text-gray-300">
-            Please hang on, we're scanning the web for you. This might take few
-            minutes ...
-          </p>
         </div>
       )}
 
       {error && <p className="text-center text-red-500 mt-4">{error}</p>}
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {results.map((result, index) => (
-          //   <AnswerCard key={index} title={result.title} link={result.link} />
-          <AnswerCard
-            key={index}
-            title={result.title}
-            description={result.description}
-            link={result.link}
-          />
-        ))}
-      </div>
+      {result && (
+        <div className="space-y-6 mt-8">
+          {/* ThinkText component */}
+          {result.think_text && <ThinkText content={result.think_text} />}
+
+          {/* Job Opportunity Cards */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {result.cards.map((card, index) => (
+              <AnswerCard
+                key={index}
+                title={card.title}
+                description={card.description}
+                link={card.link}
+              />
+            ))}
+          </div>
+
+          {/* Skills and Certifications */}
+          <div className="mt-8">
+            <h2 className="text-xl text-white font-semibold mb-4">
+              Skills Required
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {result.skills.map((skill, i) => (
+                <Badge key={`skill-${i}`} text={skill} variant="green" />
+              ))}
+            </div>
+
+            <h2 className="text-xl text-white font-semibold mt-6 mb-4">
+              Certifications & Education
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {result.certifications.map((cert, i) => (
+                <Badge key={`cert-${i}`} text={cert} variant="blue" />
+              ))}
+            </div>
+          </div>
+
+          {/* Assistant Text */}
+          {result.assistant_text && (
+            <div className="mt-8 bg-neutral-800 border border-neutral-700 rounded-lg p-6">
+              <h2 className="text-xl text-white font-semibold mb-4">Summary</h2>
+              <p className="text-neutral-300 whitespace-pre-wrap">
+                {result.assistant_text}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
