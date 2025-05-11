@@ -116,8 +116,9 @@ npm run dev
 
 ### Models used
 
-- sonar-deep-research
-- sonar
+- sonar-deep-research (too slow ❌)
+- sonar-reasoning-pro ✅
+- sonar (too basic ⚠️)
 
 ### Roles used
 
