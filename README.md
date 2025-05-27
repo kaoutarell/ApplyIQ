@@ -25,23 +25,23 @@ ApplyIQ is an app based on Perplexity Sonar API to scan the internet in real tim
 ## 👉🏻 Core Features / Use cases
 
 - Feature 1: Smart Job Discovery
-  Input: User enters skills/interests
+  Input: User enters job of interest
   Sonar API is used to:
   Search for latest jobs matching profile (with filters)
-  Get company insights and role expectations using `sonar-deep-research`
-  Show real-time results with citations
+  Get company insights and role expectations using ~sonar-deep-research~ `sonar-reasoning`
+  Show real-time results with citations -> links
 
-- Feature 2 : Resume & Cover Letter Tailoring (Bonus / if enough time left before submission)
+- Feature 2 : Display the key skills and requirements that match the job searched
   Input: Upload basic resume or fill form
-  Sonar Reasoning Pro is used to (depends on the credits left on the perplexity account):
-  Generate tailored resume keywords for each role
-  Auto-write cover letters based on role, company, and resume
+  ~Sonar Reasoning Pro~ Sonar Reasoning is used to :
+  Generate requirements and skills keywords for each role looked for
+  Data mining -> search made by scaning the keywords and making sense of all of it, serialize it then render it (multiple regex are used for this)
 
-- Feature 3 : Interview Prep Bot (Bonus / if enough time left before submission)
+- Feature 3 : Estimated salary based on the region/remote
   For a selected displayed job, generate:
-  List of likely interview questions
-  Suggested responses
-  Company trivia to impress the recruiter
+  - range of salary
+  - future insights/promotions
+  - sources
 
 ## ⚙️ Set up the project environment
 
