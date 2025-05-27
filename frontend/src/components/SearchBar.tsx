@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 
 type SearchBarProps = {
   onSearch: (query: string) => void;
@@ -26,7 +27,9 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="absolute left-4 top-3.5 text-gray-400">🔍</div>
+        <div className="absolute left-4 top-3.5 text-gray-400">
+          <MagnifyingGlassIcon className="h-5 w-5" />
+        </div>
       </div>
     </form>
   );

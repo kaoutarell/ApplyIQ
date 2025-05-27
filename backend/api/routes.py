@@ -10,11 +10,25 @@ router = APIRouter()
 def hello():
     return {"message": "Hello from modular FastAPI!"}
 
+#@router.post("/search")
+# async def search(query: QueryRequest):
+#     try:
+#         results = query_perplexity(query.query)
+#         return {"results": results}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 @router.post("/search")
 async def search(query: QueryRequest):
     try:
         results = query_perplexity(query.query)
-        return {"results": results}
+        return {
+            "results": {
+                "skills": results["structured_data"].get("skills", []),
+                "requirements": results["structured_data"].get("requirements", []),
+                "insights": results["structured_data"].get("insights", []),
+                "cards": results.get("cards", [])
+            }
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

@@ -4,45 +4,67 @@ import { useState } from "react";
 import AnswerCard from "./AnswerCard";
 import Badge from "./Badge";
 import SalaryModal from "./SalaryModal";
+import {
+  CheckCircleIcon,
+  AcademicCapIcon,
+  ClipboardDocumentCheckIcon,
+  BriefcaseIcon,
+  LightBulbIcon,
+} from "@heroicons/react/24/solid";
 
 type ResultViewProps = {
   result: {
+    skills: string[];
+    requirements: string[];
+    insights: string[];
     cards: {
       title: string;
       description: string;
       link: string;
     }[];
-    insights: string;
-    skills: string[];
-    certifications: string[];
   };
 };
 
 export default function ResultView({ result }: ResultViewProps) {
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const hasCards = result.cards?.length > 0;
-  const hasInsights = result.insights?.trim().length > 0;
+  const hasInsights = result.insights?.length > 0;
   const hasSkills = result.skills?.length > 0;
-  const hasCertifications = result.certifications?.length > 0;
+  const hasRequirements = result.requirements?.length > 0;
 
   const cleanSkills =
     result.skills
       ?.map((skill) => skill.replace(/<[^>]+>/g, "").trim())
       .filter((skill) => skill.length > 0) || [];
 
-  const cleanCertifications =
-    result.certifications
-      ?.map((cert) => cert.replace(/<[^>]+>/g, "").trim())
-      .filter((cert) => cert.length > 0) || [];
+  const cleanRequirements =
+    result.requirements
+      ?.map((req) => req.replace(/<[^>]+>/g, "").trim())
+      .filter((req) => req.length > 0) || [];
+
+  const cleanInsights =
+    result.insights
+      ?.map((insight) => insight.replace(/<[^>]+>/g, "").trim())
+      .filter((insight) => insight.length > 0) || [];
 
   return (
     <div className="space-y-8 mt-8">
       {/* Insights Section */}
       {hasInsights && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white">Insights ✨</h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <LightBulbIcon className="h-6 w-6 text-yellow-400" />
+            Insights
+          </h2>
           <div className="bg-gray-800 rounded-lg p-4 text-gray-200">
-            {result.insights}
+            <ul className="space-y-3">
+              {cleanInsights.map((insight, i) => (
+                <li key={`insight-${i}`} className="flex items-start gap-2">
+                  <CheckCircleIcon className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
@@ -50,31 +72,37 @@ export default function ResultView({ result }: ResultViewProps) {
       {/* Skills Section */}
       {hasSkills && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white">Key Skills</h2>
-          <div className="flex flex-wrap gap-2">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <ClipboardDocumentCheckIcon className="h-6 w-6 text-purple-400" />
+            Key Skills
+          </h2>
+          <div className="flex flex-wrap justify-center gap-2">
             {cleanSkills.map((skill, i) => (
               <Badge
                 key={`skill-${i}-${skill.replace(/\s+/g, "-")}`}
                 text={skill}
-                variant="green"
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Certifications Section */}
-      {hasCertifications && (
+      {/* Requirements Section */}
+      {hasRequirements && (
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white">Certifications</h2>
-          <div className="flex flex-wrap gap-2">
-            {cleanCertifications.map((cert, i) => (
-              <Badge
-                key={`cert-${i}-${cert.replace(/\s+/g, "-")}`}
-                text={cert}
-                variant="blue"
-              />
-            ))}
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <AcademicCapIcon className="h-6 w-6 text-pink-400" />
+            Requirements
+          </h2>
+          <div className="bg-gray-800 rounded-lg p-4 text-gray-200">
+            <ul className="space-y-3">
+              {cleanRequirements.map((req, i) => (
+                <li key={`req-${i}`} className="flex items-start gap-2">
+                  <AcademicCapIcon className="h-5 w-5 text-purple-400 mt-0.5 flex-shrink-0" />
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
@@ -82,7 +110,10 @@ export default function ResultView({ result }: ResultViewProps) {
       {/* Job Opportunity Cards */}
       {hasCards && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-white">Job Opportunities</h2>
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            <BriefcaseIcon className="h-6 w-6 text-indigo-400" />
+            Job Opportunities
+          </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {result.cards.map((card, index) => (
               <AnswerCard
