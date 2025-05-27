@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from models.schemas import QueryRequest
+from models.schemas import QueryRequest, SalaryRequest
 from services.perplexity import query_perplexity
+from services.estimate_salary import estimate_salary
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -15,3 +17,10 @@ async def search(query: QueryRequest):
         return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/estimate-salary")
+async def salary_estimation(request: SalaryRequest):
+    skills = request.skills
+    location = request.location
+    result = estimate_salary(skills, location)
+    return JSONResponse(content=result)

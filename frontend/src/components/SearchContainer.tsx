@@ -1,10 +1,7 @@
-// components/SearchContainer.tsx
 "use client";
-
 import { useState } from "react";
 import SearchBar from "./SearchBar";
 import ResultView from "./ResultView";
-import { fetchResults } from "@/lib/api";
 
 export default function SearchContainer() {
   const [result, setResult] = useState<any>(null);

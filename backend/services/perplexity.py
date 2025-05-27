@@ -2,57 +2,12 @@ import requests
 from config import PERPLEXITY_API_KEY
 from urllib.parse import urlparse
 import re
-import pprint
 
-# --- Utility functions ---
-
-def is_job_listing_url(url):  # filtering
+def is_job_listing_url(url: str) -> bool:
     job_keywords = ["job", "emploi", "posting", "offer", "career", "recruit", "position"]
     return any(keyword in url.lower() for keyword in job_keywords)
 
-#updated - we don't want to show the first sentence (not important)
-def extract_think_and_cleaned_content(content: str):
-    """Extract think text and clean content with improved formatting"""
-    think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
-    think_text = think_match.group(1).strip() if think_match else ""
-    
-    # Remove everything before the first result reference
-    if think_text:
-        # Find the first occurrence of "result [X]" or similar pattern
-        result_match = re.search(r'(Looking at result|Result|result)\s*\[?\d+\]?', think_text, re.IGNORECASE)
-        if result_match:
-            think_text = think_text[result_match.start():]
-        
-        # Also remove any remaining initial sentences that might be before the first result
-        sentences = re.split(r'(?<=[.!?])\s+', think_text)
-        if len(sentences) > 1 and not re.match(r'(Looking at|Result|result)', sentences[0], re.IGNORECASE):
-            think_text = ' '.join(sentences[1:])
-    
-    cleaned_content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-    
-    # Format the content
-    think_text = format_content(think_text)
-    cleaned_content = format_content(cleaned_content)
-    
-    return think_text, cleaned_content
-
-def format_content(text: str) -> str:
-    """Format content with proper line breaks and heading handling"""
-    # Convert Result[X] to bullet points
-    text = re.sub(r'Result\s*\[\d+\]', lambda m: f"\n- {m.group(0)}", text)
-    
-    # Convert **heading** to \n## heading\n
-    text = re.sub(r'\*\*(.*?)\*\*', r'\n## \1\n', text)
-    
-    # Convert # heading to \n### heading\n
-    text = re.sub(r'#\s+(.*?)(?:\n|$)', r'\n### \1\n', text)
-    
-    # Ensure proper spacing between sections
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    
-    return text.strip()
-
-def format_citations(citations):  # extract only useful citation info
+def format_citations(citations: list[str]) -> list[dict]:
     cards = []
     for citation in citations:
         if not is_job_listing_url(citation):
@@ -75,73 +30,70 @@ def format_citations(citations):  # extract only useful citation info
         })
     return cards
 
-def extract_skills_and_certifications(text):
-    # Basic patterns for skills and certs
-    skills_pattern = re.compile(
-        r"(skills\s*(?:required|preferred)?[:\-]\s*|skills include\s*|proficiency in\s*)(.+?)(?:\n|\.|\Z)", re.IGNORECASE)
-    certs_pattern = re.compile(
-        r"(certifications\s*(?:required|preferred)?[:\-]\s*|certifications include\s*|certified in\s*)(.+?)(?:\n|\.|\Z)", re.IGNORECASE)
+def extract_insights(content: str) -> str:
+    content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+    paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+    for p in paragraphs:
+        if 50 < len(p) < 300:
+            return p
+    return paragraphs[0] if paragraphs else "No insights available."
 
-    skills_matches = skills_pattern.findall(text)
-    certs_matches = certs_pattern.findall(text)
+def extract_skills(content: str) -> list[str]:
+    skill_patterns = [
+        r"(?:proficiency in|experience with|knowledge of|skills? include)[:\-]?\s*([^\.\n]+)",
+        r"(?:ERP systems like|including|such as)\s*([^\.\n]+)",
+        r"(?:requir(?:e|ing)|prefer)\s.*?(?:experience|knowledge|skills?)\s*(?:in|with)?\s*([^\.\n]+)"
+    ]
+    
+    skills = set()
+    for pattern in skill_patterns:
+        matches = re.finditer(pattern, content, re.IGNORECASE)
+        for match in matches:
+            parts = re.split(r',|;|and|or|/|•|\+', match.group(1))
+            for part in parts:
+                skill = part.strip(" *:-").title()
+                if len(skill) > 2 and not skill.isdigit():
+                    skills.add(skill)
+    return sorted(skills, key=lambda x: (-len(x), x))
 
-    # Flatten and clean results
-    skills = []
-    for _, match in skills_matches:
-        parts = re.split(r',|and|or|/|•', match)
-        skills.extend([s.strip(" *:-").title() for s in parts if len(s.strip()) > 1])
-
-    certifications = []
-    for _, match in certs_matches:
-        parts = re.split(r',|and|or|/|•', match)
-        certifications.extend([c.strip(" *:-").title() for c in parts if len(c.strip()) > 1])
-
-    return list(set(skills)), list(set(certifications))
-
-# --- Main service function ---
-
-def query_perplexity(query: str):
+def query_perplexity(query: str, is_cover_letter: bool = False) -> dict:
     url = "https://api.perplexity.ai/chat/completions"
     headers = {
         "Authorization": f"Bearer {PERPLEXITY_API_KEY}",
         "Content-Type": "application/json",
     }
+    
     payload = {
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "return_images": False,
-        "return_related_questions": False,
-        "top_k": 0,
-        "stream": False,
-        "presence_penalty": 0,
-        "frequency_penalty": 1,
-        "web_search_options": {"search_context_size": "low"},
-        "search_domain_filter": [
-            "indeed.com", "jobillico.com", "jobbank.gc.ca", "glassdoor.com",
-            "monster.ca", "emplois.ca.indeed.com", "workopolis.com", "montreal-job.ca"
+        "model": "sonar-medium-chat" if is_cover_letter else "sonar-reasoning-pro",
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a professional career advisor." if is_cover_letter 
+                          else "You are a helpful research assistant."
+            },
+            {
+                "role": "user",
+                "content": query
+            }
         ],
-        "model": "sonar-reasoning-pro",
-        "messages": [{"role": "user", "content": query}],
+        "temperature": 0.7 if is_cover_letter else 0.2,
     }
 
     response = requests.post(url, json=payload, headers=headers)
     data = response.json()
-    pprint.pprint(data)  # Log raw response for testing
 
-    # Extract core fields
-    message = data["choices"][0]["message"]["content"]
-    citations = data.get("citations", [])
-
-    # Apply custom logic
-    think_text, assistant_text = extract_think_and_cleaned_content(message)
-    citation_cards = format_citations(citations)
-    skills, certifications = extract_skills_and_certifications(assistant_text)
-
-    # Final structured result
-    return {
-        "cards": citation_cards,
-        "assistant_text": assistant_text,
-        "think_text": think_text,
-        "skills": skills,
-        "certifications": certifications
-    }
+    if is_cover_letter:
+        return {
+            "cover_letter": data["choices"][0]["message"]["content"]
+        }
+    else:
+        message = data["choices"][0]["message"]["content"]
+        citations = data.get("citations", [])
+        
+        return {
+            "cards": format_citations(citations),
+            "insights": extract_insights(message),
+            "skills": extract_skills(message),
+            "original_content": message,
+            "query": query
+        }
